@@ -84,6 +84,12 @@ public final class DropDown: UIView {
 	fileprivate var templateCell: DropDownCell!
 
 
+    public var dimmingColor: UIColor = .clear {
+        didSet {
+            super.backgroundColor = dimmingColor
+        }
+    }
+    
 	/// The view to which the drop down will displayed onto.
 	public weak var anchorView: AnchorView? {
 		didSet { setNeedsUpdateConstraints() }
@@ -170,7 +176,7 @@ public final class DropDown: UIView {
 
 	Changing the corner radius automatically reloads the drop down.
 	*/
-	public dynamic var cornerRadius = DPDConstant.UI.CornerRadius {
+	public dynamic var _cornerRadius = DPDConstant.UI.CornerRadius {
 		willSet {
 			tableViewContainer.layer.cornerRadius = newValue
 			tableView.layer.cornerRadius = newValue
@@ -335,6 +341,8 @@ public final class DropDown: UIView {
 	/// The action to execute when the drop down will show.
 	public var willShowAction: Closure?
 
+    public var didHideAction: Closure?
+    
 	/// The action to execute when the user cancels/hides the drop down.
 	public var cancelAction: Closure?
 
@@ -433,10 +441,10 @@ private extension DropDown {
 	}
 
 	func setupUI() {
-		super.backgroundColor = .clear
+		super.backgroundColor = dimmingColor
 
 		tableViewContainer.layer.masksToBounds = false
-		tableViewContainer.layer.cornerRadius = cornerRadius
+		tableViewContainer.layer.cornerRadius = _cornerRadius
 		tableViewContainer.layer.shadowColor = shadowColor.cgColor
 		tableViewContainer.layer.shadowOffset = shadowOffset
 		tableViewContainer.layer.shadowOpacity = shadowOpacity
@@ -445,7 +453,7 @@ private extension DropDown {
 		tableView.rowHeight = cellHeight
 		tableView.backgroundColor = tableViewBackgroundColor
 		tableView.separatorColor = separatorColor
-		tableView.layer.cornerRadius = cornerRadius
+		tableView.layer.cornerRadius = _cornerRadius
 		tableView.layer.masksToBounds = true
 
 		setHiddentState()
@@ -563,8 +571,8 @@ extension DropDown {
 	fileprivate func computeLayout() -> (x: CGFloat, y: CGFloat, width: CGFloat, offscreenHeight: CGFloat, visibleHeight: CGFloat, canBeDisplayed: Bool, Direction: Direction) {
 		var layout: ComputeLayoutTuple = (0, 0, 0, 0)
 		var direction = self.direction
-
-		guard let window = UIWindow.visibleWindow() else { return (0, 0, 0, 0, 0, false, direction) }
+        
+        guard let window = anchorView?.plainView.window else { return (0, 0, 0, 0, 0, false, direction) }
 
 		barButtonItemCondition: if let anchorView = anchorView as? UIBarButtonItem {
 			let isRightBarButtonItem = anchorView.plainView.frame.minX > window.frame.midX
@@ -750,7 +758,7 @@ extension DropDown {
 
 		setNeedsUpdateConstraints()
 
-		let visibleWindow = UIWindow.visibleWindow()
+        let visibleWindow = anchorView?.plainView.window
 		visibleWindow?.addSubview(self)
 		visibleWindow?.bringSubview(toFront: self)
 
@@ -806,6 +814,7 @@ extension DropDown {
 			completion: { [unowned self] finished in
 				self.isHidden = true
 				self.removeFromSuperview()
+                self.didHideAction?()
 			})
 	}
 
